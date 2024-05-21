@@ -2,7 +2,7 @@ import UIKit
 import VisionKit
 
 /**
- This class uses VisonKit to start a document scan. It either returns the cropped images in base64 or as file paths
+ This class uses VisionKit to start a document scan. It either returns the cropped images in base64 or as file paths
  depending on the configuration.
  */
 @available(iOS 13.0, *)
@@ -74,10 +74,15 @@ public class DocScanner: NSObject, VNDocumentCameraViewControllerDelegate {
         }
         
         DispatchQueue.main.async {
+            guard let viewController = self.viewController else {
+                self.errorHandler("ViewController is nil")
+                return
+            }
+            
             // launch the document scanner
             let documentCameraViewController = VNDocumentCameraViewController()
             documentCameraViewController.delegate = self
-            self.viewController?.present(documentCameraViewController, animated: true)
+            viewController.present(documentCameraViewController, animated: true)
         }
     }
     
@@ -123,12 +128,10 @@ public class DocScanner: NSObject, VNDocumentCameraViewControllerDelegate {
         var results: [String] = []
         
         // loop through all scanned pages
-        for pageNumber in 0...scan.pageCount - 1 {
+        for pageNumber in 0..<scan.pageCount {
             
             // convert scan UIImage to jpeg data
-            guard let scannedDocumentImage: Data = scan
-                .imageOfPage(at: pageNumber)
-                .jpegData(compressionQuality: CGFloat(self.croppedImageQuality) / CGFloat(100)) else {
+            guard let scannedDocumentImage = scan.imageOfPage(at: pageNumber).jpegData(compressionQuality: CGFloat(self.croppedImageQuality) / CGFloat(100)) else {
                 goBackToPreviousView(controller)
                 self.errorHandler("Unable to get scanned document in jpeg format")
                 return
@@ -137,7 +140,7 @@ public class DocScanner: NSObject, VNDocumentCameraViewControllerDelegate {
             switch responseType {
                 case ResponseType.base64:
                     // convert scan jpeg data to base64
-                    let base64EncodedImage: String = scannedDocumentImage.base64EncodedString()
+                    let base64EncodedImage = scannedDocumentImage.base64EncodedString()
                     results.append(base64EncodedImage)
                 case ResponseType.imageFilePath:
                     do {
